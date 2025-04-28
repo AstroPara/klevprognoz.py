@@ -203,7 +203,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(welcome_text, reply_markup=reply_markup)
-    return CHOOSING_WATERBODY
+
+    return ConversationHandler.END
 
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await start(update, context)
@@ -219,29 +220,34 @@ async def choose_waterbody(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOOSING_WATERBODY
 
     elif text == "🛟 Помощь":
-        await update.message.reply_text("🛠 Помощь:\n\nВыберите водоём ➔ Выберите рыбу ➔ Укажите дату ➔ Получите прогноз! 🎣")
-        return CHOOSING_WATERBODY
+        await update.message.reply_text(
+            "🛠 Помощь:\n\nВыберите водоём ➔ Выберите рыбу ➔ Укажите дату ➔ Получите прогноз! 🎣"
+        )
+        return ConversationHandler.END
 
     elif text == "ℹ️ О боте":
-        await update.message.reply_text("ℹ️ Klevprofish_bot v1.2\nАвтор: @твойникнейм\nПредсказывает клёв на основе погоды и Луны!")
-        return CHOOSING_WATERBODY
+        await update.message.reply_text(
+            "ℹ️ Klevprofish_bot v1.2\nАвтор: @твойникнейм\nПредсказывает клёв на основе погоды и Луны!"
+        )
+        return ConversationHandler.END
 
     elif text == "🔁 Вернуться в меню":
         return await start(update, context)
 
-    elif text not in WATERBODIES:
-        await update.message.reply_text("❗ Пожалуйста, выберите водоём из списка.")
-        return CHOOSING_WATERBODY
+    elif text in WATERBODIES:
+        context.user_data['waterbody'] = text
 
-    context.user_data['waterbody'] = text
+        fish_list = ["Карп", "Щука"]
+        keyboard = [[fish] for fish in fish_list]
+        keyboard.append(["🔁 Вернуться в меню"])
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    fish_list = ["Карп", "Щука"]
-    keyboard = [[fish] for fish in fish_list]
-    keyboard.append(["🔁 Вернуться в меню"])
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text("🐟 Теперь выберите рыбу:", reply_markup=reply_markup)
+        return CHOOSING_FISH
 
-    await update.message.reply_text("🐟 Теперь выберите рыбу:", reply_markup=reply_markup)
-    return CHOOSING_FISH
+    else:
+        await update.message.reply_text("❗ Пожалуйста, выберите пункт из меню.")
+        return ConversationHandler.END
 
 async def choose_fish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -260,6 +266,22 @@ async def choose_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_choice == "🔁 Вернуться в меню":
         return await start(update, context)
 
+    # Если ожидается ручной ввод даты
+    if context.user_data.get('awaiting_manual_date', False):
+        target_date = parse_date(user_choice)
+        if not target_date:
+            await update.message.reply_text("❗ Неверный формат даты. Введите в формате ДД.ММ.ГГГГ (например, 02.05.2025):")
+            return CHOOSING_DATE
+
+        today = datetime.now().date()
+        if not (today <= target_date.date() <= today + timedelta(days=5)):
+            await update.message.reply_text(f"⚠️ Прогноз доступен только на даты с {today.strftime('%d.%m.%Y')} до {(today + timedelta(days=5)).strftime('%d.%m.%Y')}.")
+            return CHOOSING_DATE
+
+        context.user_data['target_date'] = target_date
+        context.user_data['awaiting_manual_date'] = False
+        return await show_forecast(update, context)
+
     if user_choice == "Сегодня":
         context.user_data['target_date'] = datetime.now()
         return await show_forecast(update, context)
@@ -273,20 +295,9 @@ async def choose_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✏️ Введите дату в формате ДД.ММ.ГГГГ:")
         return CHOOSING_DATE
 
-    elif context.user_data.get('awaiting_manual_date'):
-        target_date = parse_date(user_choice)
-        if not target_date:
-            await update.message.reply_text("❗ Неверный формат даты!")
-            return CHOOSING_DATE
-
-        today = datetime.now().date()
-        if not (today <= target_date.date() <= today + timedelta(days=5)):
-            await update.message.reply_text("⚠️ Прогноз доступен на 5 дней вперёд.")
-            return CHOOSING_DATE
-
-        context.user_data['target_date'] = target_date
-        context.user_data['awaiting_manual_date'] = False
-        return await show_forecast(update, context)
+    else:
+        await update.message.reply_text("❗ Пожалуйста, выберите: Сегодня, Завтра или Своя дата.")
+        return CHOOSING_DATE
 
 async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     waterbody = context.user_data['waterbody']
