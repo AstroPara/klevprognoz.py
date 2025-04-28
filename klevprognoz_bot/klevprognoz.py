@@ -351,9 +351,9 @@ if __name__ == "__main__":
         fallbacks=[CommandHandler("cancel", cancel), CommandHandler("menu", menu)],
     )
 
-    application.add_handler(conv_handler)
     application.add_handler(CommandHandler("menu", menu))
     application.add_handler(CommandHandler("stats", stats))
+    application.add_handler(conv_handler)
 
     print("🚀 Klevprofish_bot v1.2 полностью запущен!")
     application.run_polling()
