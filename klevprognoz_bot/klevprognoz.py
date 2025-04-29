@@ -535,30 +535,29 @@ def main():
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.Regex("^🎣 Начать$"), start),
-            CommandHandler("start", start)
-        ],
+        entry_points=[MessageHandler(filters.Regex("^🎣 Начать$"), start)],
         states={
             CHOOSING_REGION: [
+                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)
             ],
             CHOOSING_DISTRICT: [
-                MessageHandler(filters.Regex("^⬅️ Назад$"), start),
+                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_region),
+                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)
             ],
             CHOOSING_WATERBODY: [
-                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_region),
+                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_district),
+                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)
             ],
             CHOOSING_DATE: [
-                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_district),
+                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_waterbody),
+                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)
             ],
         },
-        fallbacks=[
-            MessageHandler(filters.Regex("^❌ Отмена$"), cancel)
-        ],
+        fallbacks=[MessageHandler(filters.Regex("^❌ Отмена$"), cancel)],
     )
 
     application.add_handler(conv_handler)
