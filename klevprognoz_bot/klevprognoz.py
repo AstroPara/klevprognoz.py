@@ -535,7 +535,10 @@ def main():
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("^🎣 Начать$"), start)],
+        entry_points=[
+            MessageHandler(filters.Regex("^🎣 Начать$"), start),
+            CommandHandler("start", start)
+        ],
         states={
             CHOOSING_REGION: [
                 MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
@@ -563,6 +566,7 @@ def main():
     application.add_handler(conv_handler)
     logging.info("🚀 Бот запущен. Ожидаю команды...")
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
