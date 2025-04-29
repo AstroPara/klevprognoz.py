@@ -1,15 +1,14 @@
-from datetime import datetime, timedelta
+import os
 import logging
 import requests
 import ephem
-import os
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
-    ContextTypes,
     ConversationHandler,
+    ContextTypes,
     filters
 )
 
@@ -19,9 +18,7 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 # === Состояния ===
 CHOOSING_REGION, CHOOSING_DISTRICT, CHOOSING_WATERBODY, CHOOSING_DATE = range(4)
-
-# === Логирование ===
-logging.basicConfig(level=logging.INFO)
+=======
 
 # === Заглушка для функции (чтобы не ломалась логика) ===
 def save_user_id(user_id):
@@ -160,13 +157,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_user_id(update.effective_user.id)
     keyboard = [[r] for r in REGIONS]
     await update.message.reply_text("🏞 Выберите область для рыбалки:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
+=======
+# === Состояния ===
+CHOOSING_REGION = 0
+
+# === Данные ===
+REGIONS = {"Минская область": "Minsk"}
+
+# === Команды ===
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    logging.info(f"Получен /start от user_id={update.effective_user.id}")
+    keyboard = [[region] for region in REGIONS]
+    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("🏞 Выберите область:", reply_markup=markup)
+>>>>>>> ff8a209aaecf36ed97305f89b420679e61985ffd
     return CHOOSING_REGION
 
-async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     region = update.message.text
     if region not in REGIONS:
-        await update.message.reply_text("❗ Выберите область из списка.")
+        await update.message.reply_text("❗ Неверный выбор. Повторите.")
         return CHOOSING_REGION
+<<<<<<< HEAD
     context.user_data['region'] = region
     keyboard = [[d] for d in DISTRICTS_BY_REGION[region]]
     await update.message.reply_text("🏘 Выберите район:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
@@ -215,21 +228,38 @@ async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"\n🌑 Фаза Луны: {moon}"
     )
     await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
+=======
+    await update.message.reply_text(f"✅ Вы выбрали: {region}", reply_markup=ReplyKeyboardRemove())
+>>>>>>> ff8a209aaecf36ed97305f89b420679e61985ffd
     return ConversationHandler.END
 
 # === Запуск ===
 
+<<<<<<< HEAD
 if __name__ == "__main__":
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     conv = ConversationHandler(
+=======
+def main():
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+
+    conv_handler = ConversationHandler(
+>>>>>>> ff8a209aaecf36ed97305f89b420679e61985ffd
         entry_points=[CommandHandler("start", start)],
         states={
-            CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)],
-            CHOOSING_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)],
-            CHOOSING_WATERBODY: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)],
-            CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)],
+            CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)]
         },
         fallbacks=[CommandHandler("start", start)],
     )
+<<<<<<< HEAD
     app.add_handler(conv)
     app.run_polling()
+=======
+
+    application.add_handler(conv_handler)
+    logging.info("🚀 Бот запущен. Ожидаю команды...")
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
+>>>>>>> ff8a209aaecf36ed97305f89b420679e61985ffd
