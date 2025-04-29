@@ -520,14 +520,23 @@ async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chance = calculate_success(weather['temp'], weather['wind'], weather['pressure'], moon, fish)
         result += f"- {fish}: {chance}%\n"
 
-    await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
-    return ConversationHandler.END
-
-# Кнопка для нового прогноза
+    # Кнопка для нового прогноза
     keyboard = [["🎣 Новый прогноз"]]
-    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
     await update.message.reply_text(result, reply_markup=markup)
+
+    return CHOOSING_REGION
+
+async def restart_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Очистка данных пользователя
+    context.user_data.clear()
+
+    # Кнопки со списком областей
+    keyboard = [[region] for region in REGIONS.keys()]
+    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+
+    await update.message.reply_text("🏞 Выберите область:", reply_markup=markup)
     return CHOOSING_REGION
 
 # === Запуск ===
@@ -536,37 +545,33 @@ def main():
 
     conv_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.Regex("^🎣 Начать$"), start),
-            CommandHandler("start", start)
+            CommandHandler("start", start),
+            MessageHandler(filters.Regex("^🎣 Начать$"), start)
         ],
         states={
             CHOOSING_REGION: [
-                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
+                MessageHandler(filters.Regex("^🎣 Новый прогноз$"), restart_forecast),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)
             ],
             CHOOSING_DISTRICT: [
-                MessageHandler(filters.Regex("^⬅️ Назад$"), start),
-                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)
             ],
             CHOOSING_WATERBODY: [
-                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_region),
-                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)
             ],
             CHOOSING_DATE: [
-                MessageHandler(filters.Regex("^⬅️ Назад$"), choose_district),
-                MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)
             ],
         },
-        fallbacks=[MessageHandler(filters.Regex("^❌ Отмена$"), cancel)],
+        fallbacks=[
+            MessageHandler(filters.Regex("^❌ Отмена$"), cancel)
+        ],
     )
 
     application.add_handler(conv_handler)
+
     logging.info("🚀 Бот запущен. Ожидаю команды...")
     application.run_polling()
-
 
 if __name__ == "__main__":
     main()
