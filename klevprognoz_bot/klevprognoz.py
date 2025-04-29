@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 # === Твои токены ===
-TELEGRAM_TOKEN = '7297237331:AAEBR05LkndfAl-uJoiUmimctS6AZ7UxSwM'
+TELEGRAM_TOKEN = '7253635653:AAFMhUHSm54ntMjPaUiwF2HvLG81NFmQOT4'
 OPENWEATHER_API_KEY = '355f0d0d5a864bdc9cb964863445f16c'
 
 # === Состояния ===
