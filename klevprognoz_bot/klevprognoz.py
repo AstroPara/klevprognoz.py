@@ -516,8 +516,12 @@ async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chance = calculate_success(weather['temp'], weather['wind'], weather['pressure'], moon, fish)
         result += f"- {fish}: {chance}%\n"
 
-    await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
-    return ConversationHandler.END
+# Кнопка для нового прогноза
+    keyboard = [["🎣 Новый прогноз"]]
+    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+    await update.message.reply_text(result, reply_markup=markup)
+    return CHOOSING_REGION
 
 # === Запуск ===
 def main():
