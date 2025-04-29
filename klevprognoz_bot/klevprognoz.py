@@ -18,7 +18,6 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 # === Состояния ===
 CHOOSING_REGION, CHOOSING_DISTRICT, CHOOSING_WATERBODY, CHOOSING_DATE = range(4)
-=======
 
 # === Заглушка для функции (чтобы не ломалась логика) ===
 def save_user_id(user_id):
@@ -171,7 +170,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     keyboard = [[region] for region in REGIONS]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text("🏞 Выберите область:", reply_markup=markup)
->>>>>>> ff8a209aaecf36ed97305f89b420679e61985ffd
     return CHOOSING_REGION
 
 async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -179,7 +177,6 @@ async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if region not in REGIONS:
         await update.message.reply_text("❗ Неверный выбор. Повторите.")
         return CHOOSING_REGION
-<<<<<<< HEAD
     context.user_data['region'] = region
     keyboard = [[d] for d in DISTRICTS_BY_REGION[region]]
     await update.message.reply_text("🏘 Выберите район:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
