@@ -449,7 +449,7 @@ async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return CHOOSING_REGION
 
     context.user_data["region"] = region
-    keyboard = [[d] for d in DISTRICTS_BY_REGION[region]] + [["❌ Отмена"]]
+    keyboard = [[d] for d in DISTRICTS_BY_REGION[region]] + [["⬅ Назад"]]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text("🏘 Теперь выбери район:", reply_markup=markup)
     return CHOOSING_DISTRICT
@@ -463,7 +463,7 @@ async def choose_district(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("❗ Нет данных по водоёмам в этом районе.", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
-    keyboard = [[w] for w in waterbodies] + [["❌ Отмена"]]
+    keyboard = [[w] for w in waterbodies] + [["⬅ Назад"]]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text("🌊 Выбери водоём:", reply_markup=markup)
     return CHOOSING_WATERBODY
@@ -472,7 +472,7 @@ async def choose_waterbody(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     waterbody = update.message.text
     context.user_data["waterbody"] = waterbody
 
-    keyboard = [["Сегодня"], ["Завтра"], ["❌ Отмена"]]
+    keyboard = [["Сегодня"], ["Завтра"], ["⬅ Назад"]]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text("📅 Выбери день:", reply_markup=markup)
     return CHOOSING_DATE
@@ -537,25 +537,17 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[
             MessageHandler(filters.Regex("^🎣 Начать$"), start),
-            CommandHandler("start", start)
+            CommandHandler("start", start),
+            MessageHandler(filters.Regex("^🔄 Новый прогноз$"), start),
         ],
         states={
-            CHOOSING_REGION: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)
-            ],
-            CHOOSING_DISTRICT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)
-            ],
-            CHOOSING_WATERBODY: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)
-            ],
-            CHOOSING_DATE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)
-            ],
+            CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)],
+            CHOOSING_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)],
+            CHOOSING_WATERBODY: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)],
+            CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)],
         },
         fallbacks=[
-            MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
-            MessageHandler(filters.Regex("^⬅ Назад$"), start)
+            MessageHandler(filters.Regex("^❌ Отмена$"), cancel)
         ],
     )
 
