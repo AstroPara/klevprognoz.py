@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 import ephem
+from telegram.constants import ChatAction 
 from datetime import datetime, timedelta
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
@@ -10,7 +11,7 @@ from telegram.ext import (
     MessageHandler,
     ConversationHandler,
     ContextTypes,
-    filters,
+    filters
 )
 
 # === Переменные окружения ===
@@ -495,6 +496,9 @@ async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     waterbody = context.user_data["waterbody"]
     target_date = context.user_data["target_date"]
 
+    # Эффект "пишет..."
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+
     city = WATERBODY_TO_CITY.get(waterbody, REGIONS[region])
     weather = fetch_weather(city)
     if not weather:
@@ -516,6 +520,9 @@ async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chance = calculate_success(weather['temp'], weather['wind'], weather['pressure'], moon, fish)
         result += f"- {fish}: {chance}%\n"
 
+    await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
+    return ConversationHandler.END
+
 # Кнопка для нового прогноза
     keyboard = [["🎣 Новый прогноз"]]
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -533,14 +540,22 @@ def main():
             CommandHandler("start", start)
         ],
         states={
-            CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)],
-            CHOOSING_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)],
-            CHOOSING_WATERBODY: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)],
-            CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)],
+            CHOOSING_REGION: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)
+            ],
+            CHOOSING_DISTRICT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)
+            ],
+            CHOOSING_WATERBODY: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)
+            ],
+            CHOOSING_DATE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)
+            ],
         },
         fallbacks=[
             MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
-            MessageHandler(filters.Regex("^🔄 Новый прогноз$"), start),
+            MessageHandler(filters.Regex("^⬅ Назад$"), start)
         ],
     )
 
