@@ -524,7 +524,10 @@ def main():
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("^🎣 Начать$"), start)],
+        entry_points=[
+            CommandHandler("start", start),
+            MessageHandler(filters.Regex("^🎣 Начать$"), start)
+        ],
         states={
             CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)],
             CHOOSING_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)],
