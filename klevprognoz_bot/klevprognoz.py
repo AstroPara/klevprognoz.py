@@ -160,7 +160,7 @@ def calculate_success(temp, wind, pressure, moon_phase):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     user_id = update.effective_user.id
-    save_user_id(user_id)
+    # save_user_id(user_id)
 
     keyboard = [[region] for region in REGIONS]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
