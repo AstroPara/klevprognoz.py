@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 import logging
 import requests
 import ephem
-import random
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+import os
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -13,20 +13,21 @@ from telegram.ext import (
     filters
 )
 
-# === Твои токены ===
-import os
-
+# === Токены ===
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 # === Состояния ===
-CHOOSING_REGION, CHOOSING_DISTRICT, CHOOSING_WATERBODY, CHOOSING_FISH, CHOOSING_DATE = range(5)
+CHOOSING_REGION, CHOOSING_DISTRICT, CHOOSING_WATERBODY, CHOOSING_DATE = range(4)
 
 # === Логирование ===
 logging.basicConfig(level=logging.INFO)
 
-# === Базы данных ===
+# === Заглушка для функции (чтобы не ломалась логика) ===
+def save_user_id(user_id):
+    pass
 
+# === Базы данных ===
 REGIONS = {
     "Минская область": "Minsk"
 }
@@ -67,7 +68,6 @@ WATERBODIES_BY_DISTRICT = {
     "Червенский район": ["Чигиринское водохранилище"]
 }
 
-# === Водоёмы и города для погоды ===
 WATERBODY_TO_CITY = {
     "Заславское водохранилище": "Zaslawye",
     "Вилейское водохранилище": "Vileyka",
@@ -89,7 +89,6 @@ WATERBODY_TO_CITY = {
     "Озеро Рудея": "Luban"
 }
 
-# === Рыбы по водоёмам ===
 FISH_BY_WATERBODY = {
     "Заславское водохранилище": ["Щука", "Окунь", "Плотва"],
     "Вилейское водохранилище": ["Судак", "Щука", "Окунь", "Сом"],
@@ -111,15 +110,14 @@ FISH_BY_WATERBODY = {
     "Озеро Рудея": ["Судак", "Плотва"]
 }
 
+# === Логика ===
 
-# === Вспомогательные функции ===
-
-def fetch_weather(city, offset=0):
+def fetch_weather(city):
     try:
         url = f"https://api.openweathermap.org/data/2.5/weather?q={city},BY&appid={OPENWEATHER_API_KEY}&units=metric&lang=ru"
         response = requests.get(url)
-        data = response.json()
         if response.status_code == 200:
+            data = response.json()
             return {
                 "temp": data["main"]["temp"],
                 "wind": data["wind"]["speed"],
@@ -127,7 +125,7 @@ def fetch_weather(city, offset=0):
                 "description": data["weather"][0]["description"]
             }
     except Exception as e:
-        print(f"Ошибка погоды: {e}")
+        logging.error(f"Ошибка погоды: {e}")
     return None
 
 def get_moon_phase(date=None):
@@ -159,16 +157,9 @@ def calculate_success(temp, wind, pressure, moon_phase):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
-    user_id = update.effective_user.id
-    save_user_id(user_id)
-
-    keyboard = [[region] for region in REGIONS]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-    await update.message.reply_text(
-        "🏞 Выберите область для рыбалки:",
-        reply_markup=reply_markup
-    )
+    save_user_id(update.effective_user.id)
+    keyboard = [[r] for r in REGIONS]
+    await update.message.reply_text("🏞 Выберите область для рыбалки:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
     return CHOOSING_REGION
 
 async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -176,43 +167,30 @@ async def choose_region(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if region not in REGIONS:
         await update.message.reply_text("❗ Выберите область из списка.")
         return CHOOSING_REGION
-
     context.user_data['region'] = region
-    districts = DISTRICTS_BY_REGION.get(region, [])
-    keyboard = [[d] for d in districts]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-    await update.message.reply_text("🏘 Теперь выберите район:", reply_markup=reply_markup)
+    keyboard = [[d] for d in DISTRICTS_BY_REGION[region]]
+    await update.message.reply_text("🏘 Выберите район:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
     return CHOOSING_DISTRICT
 
 async def choose_district(update: Update, context: ContextTypes.DEFAULT_TYPE):
     district = update.message.text
-    context.user_data["district"] = district
-
-    waterbodies = WATERBODIES_BY_DISTRICT.get(district)
+    context.user_data['district'] = district
+    waterbodies = WATERBODIES_BY_DISTRICT.get(district, [])
     if not waterbodies:
-        await update.message.reply_text("❗Нет данных по водоёмам в этом районе.")
+        await update.message.reply_text("❗Нет данных по водоёмам.")
         return ConversationHandler.END
-
     keyboard = [[w] for w in waterbodies]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("🌊 Выберите водоём:", reply_markup=reply_markup)
+    await update.message.reply_text("🌊 Выберите водоём:", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
     return CHOOSING_WATERBODY
 
 async def choose_waterbody(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    waterbody = update.message.text
-    context.user_data["waterbody"] = waterbody
-
+    context.user_data['waterbody'] = update.message.text
     keyboard = [["Сегодня"], ["Завтра"]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("📅 На какой день нужен прогноз?", reply_markup=reply_markup)
+    await update.message.reply_text("📅 На какой день прогноз?", reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True))
     return CHOOSING_DATE
 
 async def choose_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    date_choice = update.message.text
-    target_date = datetime.now() if date_choice == "Сегодня" else datetime.now() + timedelta(days=1)
-    context.user_data["target_date"] = target_date
-
+    context.user_data['target_date'] = datetime.now() if update.message.text == "Сегодня" else datetime.now() + timedelta(days=1)
     return await show_forecast(update, context)
 
 async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -220,48 +198,38 @@ async def show_forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     district = context.user_data["district"]
     waterbody = context.user_data["waterbody"]
     target_date = context.user_data["target_date"]
-
-    city_eng = REGIONS.get(region, "Minsk")
-    weather = fetch_weather(city_eng)
+    city = WATERBODY_TO_CITY.get(waterbody, REGIONS[region])
+    weather = fetch_weather(city)
     if not weather:
-        await update.message.reply_text("⚠️ Не удалось получить данные погоды.")
+        await update.message.reply_text("⚠️ Не удалось получить погоду.")
         return ConversationHandler.END
-
-    moon_phase = get_moon_phase(target_date)
+    moon = get_moon_phase(target_date)
     result = f"📍 Область: {region}\n📍 Район: {district}\n🌊 Водоём: {waterbody}\n\n"
-
-    fishes = FISH_BY_WATERBODY.get(waterbody, [])
-    for fish in fishes:
-        success = calculate_success(weather['temp'], weather['wind'], weather['pressure'], moon_phase)
-        result += f"🐟 {fish}: вероятность клёва {success}%\n"
-
+    for fish in FISH_BY_WATERBODY.get(waterbody, []):
+        chance = calculate_success(weather['temp'], weather['wind'], weather['pressure'], moon)
+        result += f"🐟 {fish}: вероятность клёва {chance}%\n"
     result += (
         f"\n🌡 Температура: {weather['temp']}°C"
         f"\n💨 Ветер: {weather['wind']} м/с"
         f"\n📈 Давление: {weather['pressure']} мм рт. ст."
-        f"\n🌑 Фаза Луны: {moon_phase}"
+        f"\n🌑 Фаза Луны: {moon}"
     )
-
     await update.message.reply_text(result, reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
 
-# === Запуск бота ===
+# === Запуск ===
 
 if __name__ == "__main__":
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+    app = Application.builder().token(TELEGRAM_TOKEN).build()
+    conv = ConversationHandler(
+        entry_points=[CommandHandler("start", start)],
         states={
             CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)],
             CHOOSING_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_district)],
             CHOOSING_WATERBODY: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)],
             CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)],
         },
-        fallbacks=[CommandHandler('start', start)],
+        fallbacks=[CommandHandler("start", start)],
     )
-
-    application.add_handler(conv_handler)
-
-    print("🚀 Klevprofish_bot полностью запущен!")
-    application.run_polling()
+    app.add_handler(conv)
+    app.run_polling()
