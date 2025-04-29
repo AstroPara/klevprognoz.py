@@ -525,8 +525,8 @@ def main():
 
     conv_handler = ConversationHandler(
         entry_points=[
-            CommandHandler("start", start),
-            MessageHandler(filters.Regex("^🎣 Начать$"), start)
+            MessageHandler(filters.Regex("^🎣 Начать$"), start),
+            CommandHandler("start", start)
         ],
         states={
             CHOOSING_REGION: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_region)],
@@ -534,7 +534,10 @@ def main():
             CHOOSING_WATERBODY: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_waterbody)],
             CHOOSING_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, choose_date)],
         },
-        fallbacks=[MessageHandler(filters.Regex("^❌ Отмена$"), cancel)],
+        fallbacks=[
+            MessageHandler(filters.Regex("^❌ Отмена$"), cancel),
+            MessageHandler(filters.Regex("^🔄 Новый прогноз$"), start),
+        ],
     )
 
     application.add_handler(conv_handler)
